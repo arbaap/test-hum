@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 mongoose.set("strictQuery", false);
 
 var mongoURL =
-  "mongodb+srv://Pengukur_pHtanah:adit1505@cluster0.zkhdhpw.mongodb.net/";
+  "mongodb+srv://magang:magang@cluster0.93sie2d.mongodb.net/test-hum";
 
 
 mongoose.connect(mongoURL);
