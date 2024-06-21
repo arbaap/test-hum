@@ -3,13 +3,9 @@ const router = express.Router();
 const Data = require("../models/dbData");
 const axios = require("axios");
 
+// Route untuk menyimpan data ke database lokal
 router.post("/kirimData", async (req, res) => {
-  const {
-    kelembapan_tanah,
-    temperature,
-    humidity,
-    pH_tanah,
- } = req.body;
+  const { kelembapan_tanah, temperature, humidity, pH_tanah } = req.body;
 
   const timestamp = new Date();
 
@@ -17,12 +13,14 @@ router.post("/kirimData", async (req, res) => {
     kelembapan_tanah: kelembapan_tanah,
     temperature: temperature,
     humidity: humidity,
-    pH_tanah: pH_tanah,
+    pH_tanah: 'haha',
   });
+
+  console.log("GEt Data:", newData);
 
   try {
     const result = await newData.save();
-    console.log("Berhasil menyimpan data semua:", result);
+    console.log("Berhasil menyimpan dan mengalihkan:", result);
     res.status(200).json({ message: "Berhasil menyimpan data semua" });
   } catch (err) {
     console.log("Gagal menyimpan data semua:", err);
@@ -30,8 +28,7 @@ router.post("/kirimData", async (req, res) => {
   }
 });
 
-
-router.post("/kirimDatas", async (req, res) => {
+router.post("/sendData", async (req, res) => {
   const { kelembapan_tanah, temperature, humidity, pH_tanah } = req.body;
 
   const timestamp = new Date();
@@ -47,8 +44,7 @@ router.post("/kirimDatas", async (req, res) => {
     const result = await newData.save();
     console.log("Berhasil menyimpan data:", result);
 
-    const serverHttpUrl = "http://test-hum.vercel.app/api/data/kirimDatas";
-    const serverHttpsUrl = "https://test-hum.vercel.app/api/data/kirimDatas";
+    const serverUrl = "https://test-hum.vercel.app/api/data/kirimData";
 
     const payload = {
       kelembapan_tanah,
@@ -57,11 +53,15 @@ router.post("/kirimDatas", async (req, res) => {
       pH_tanah,
     };
 
-    const response = await axios.post(serverHttpUrl, payload);
+    const response = await axios.post(serverUrl, payload);
 
+    // Mengatasi redirect jika diperlukan
     if (response.status === 301 || response.status === 302) {
       console.log("Menerima redirect, mengirim ulang dengan HTTPS...");
-      const httpsResponse = await axios.post(serverHttpsUrl, payload);
+      const httpsResponse = await axios.post(
+        serverUrl.replace("http:", "https:"),
+        payload
+      );
       res.status(httpsResponse.status).json(httpsResponse.data);
     } else {
       console.log("Data terkirim via HTTP");
@@ -77,6 +77,7 @@ router.post("/kirimDatas", async (req, res) => {
   }
 });
 
+// Route untuk mendapatkan semua data dari database lokal
 router.get("/getDataAll", async (req, res) => {
   try {
     const data = await Data.find({}).sort({ createdAt: -1 });

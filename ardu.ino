@@ -178,7 +178,7 @@ void sendDataAll(String kelembapanTanah, String temperature, String humidity, St
   HTTPClient http;
   http.setTimeout(5000); 
 
-  String url = "http://server-phtanah.vercel.app/api/data/kirimData"; 
+  String url = "https://test-hum.vercel.app/api/data/kirimDatas"; 
   http.begin(url);
   http.addHeader("Content-Type", "application/json");
 
