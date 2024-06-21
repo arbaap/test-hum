@@ -47,8 +47,8 @@ router.post("/kirimDatas", async (req, res) => {
     const result = await newData.save();
     console.log("Berhasil menyimpan data:", result);
 
-    const serverHttpUrl = "https:localhost:5000/api/data/kirimDatas";
-    const serverHttpsUrl = "https:localhost:5000/api/data/kirimDatas";
+    const serverHttpUrl = "http://test-hum.vercel.app/api/data/kirimDatas";
+    const serverHttpsUrl = "https://test-hum.vercel.app/api/data/kirimDatas";
 
     const payload = {
       kelembapan_tanah,
