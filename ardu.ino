@@ -1,6 +1,5 @@
 #define TINY_GSM_MODEM_SIM800
 
-
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
@@ -8,7 +7,6 @@
 #include <TinyGsmClient.h>
 #include <HTTPClient.h>
 
-// Pin definitions
 #define SOIL_MOISTURE_PIN 33
 #define BME_SDA 18
 #define BME_SCL 19
@@ -24,9 +22,9 @@
 #define MODEM_RX 26
 #define MODEM_BAUD 115200
 
-const char apn[] = "indosatgprs";  
-const char user[] = "";          
-const char pass[] = "";          
+const char apn[] = "internet";  
+const char user[] = "";         
+const char pass[] = "";         
 
 Adafruit_BME280 bme;
 LiquidCrystal_I2C lcd(0x27, 16, 2);
@@ -81,18 +79,12 @@ void setup() {
   Serial.print("Modem: ");
   Serial.println(modemInfo);
 
-
-
   Serial.print("Connecting to network...");
   if (!modem.waitForNetwork()) {
     Serial.println(" fail");
     while (true);
   }
   Serial.println(" success");
-
-  IPAddress localIP = modem.localIP();
-  Serial.print("Modem IP Address: ");
-  Serial.println(localIP);
 
   Serial.print("Connecting to ");
   Serial.print(apn);
@@ -160,67 +152,36 @@ void loop() {
         firstDisplay = true;
       }
 
+      sendDataAll(String(soilMoisturePercentage), String(temperature), String(humidity), String(pH));
 
       int signalQuality = modem.getSignalQuality();
       Serial.print("Signal quality: ");
       Serial.print(signalQuality);
       Serial.println(" dBm");
-
-
-      sendDataAll(String(soilMoisturePercentage), String(temperature), String(humidity), String(pH));
     }
   }
-
-  delay(interval);
 }
 
 void sendDataAll(String kelembapanTanah, String temperature, String humidity, String pHTanah) {
   HTTPClient http;
-  http.setTimeout(5000); 
-
-  String url = "https://test-hum.vercel.app/api/data/kirimDatas"; 
-  http.begin(url);
+  
+  http.begin("https://server-phtanah.vercel.app/api/data/kirimData");
   http.addHeader("Content-Type", "application/json");
 
   String payload = "{\"kelembapan_tanah\": \"" + kelembapanTanah + "\",\"temperature\": \"" + temperature + "\", \"humidity\": \"" + humidity + "\", \"pH_tanah\": \"" + pHTanah + "\"}";
 
-  int httpResponseCode = http.POST(payload);
+  http.followRedirects(true);
 
-  if (httpResponseCode == HTTP_CODE_MOVED_PERMANENTLY || httpResponseCode == HTTP_CODE_PERMANENT_REDIRECT) {
-    String newUrl = http.header("Location");
-    Serial.println("Ngirim ke : " + newUrl);
-    http.end(); 
-    http.begin(newUrl); 
-    http.addHeader("Content-Type", "application/json");
-    httpResponseCode = http.POST(payload);
-  }
+  int httpResponseCode = http.POST(payload);
 
   if (httpResponseCode > 0) {
     Serial.print("Data Terkirim ke Server! Kode respons: ");
     Serial.println(httpResponseCode);
-
-    String response = http.getString();
-    Serial.print("Server Response: ");
-    Serial.println(response);
   } else {
     Serial.print("Gagal mengirim data. Kode respons: ");
     Serial.println(httpResponseCode);
-
-    if (httpResponseCode == -1) {
-      Serial.println("Gagal connect, coba lagi ..");
-      delay(1000); 
-      httpResponseCode = http.POST(payload); 
-    }
-
-    if (httpResponseCode > 0) {
-      Serial.print("Data Terkirim setelah retry. Kode respons: ");
-      Serial.println(httpResponseCode);
-    } else {
-      String error = http.errorToString(httpResponseCode).c_str();
-      Serial.print("HTTP error: ");
-      Serial.println(error);
-    }
   }
 
+  // Menutup koneksi HTTP
   http.end();
 }

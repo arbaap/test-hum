@@ -1,34 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const Data = require("../models/dbData");
-const axios = require("axios");
 
-// Route untuk menyimpan data ke database lokal
 router.post("/kirimData", async (req, res) => {
-  const { kelembapan_tanah, temperature, humidity, pH_tanah } = req.body;
-
-  const timestamp = new Date();
-
-  const newData = new Data({
-    kelembapan_tanah: kelembapan_tanah,
-    temperature: temperature,
-    humidity: humidity,
-    pH_tanah: 'haha',
-  });
-
-  console.log("GEt Data:", newData);
-
-  try {
-    const result = await newData.save();
-    console.log("Berhasil menyimpan dan mengalihkan:", result);
-    res.status(200).json({ message: "Berhasil menyimpan data semua" });
-  } catch (err) {
-    console.log("Gagal menyimpan data semua:", err);
-    res.status(500).json({ message: "Gagal menyimpan data semua" });
-  }
-});
-
-router.post("/sendData", async (req, res) => {
   const { kelembapan_tanah, temperature, humidity, pH_tanah } = req.body;
 
   const timestamp = new Date();
@@ -42,42 +16,14 @@ router.post("/sendData", async (req, res) => {
 
   try {
     const result = await newData.save();
-    console.log("Berhasil menyimpan data:", result);
-
-    const serverUrl = "https://test-hum.vercel.app/api/data/kirimData";
-
-    const payload = {
-      kelembapan_tanah,
-      temperature,
-      humidity,
-      pH_tanah,
-    };
-
-    const response = await axios.post(serverUrl, payload);
-
-    // Mengatasi redirect jika diperlukan
-    if (response.status === 301 || response.status === 302) {
-      console.log("Menerima redirect, mengirim ulang dengan HTTPS...");
-      const httpsResponse = await axios.post(
-        serverUrl.replace("http:", "https:"),
-        payload
-      );
-      res.status(httpsResponse.status).json(httpsResponse.data);
-    } else {
-      console.log("Data terkirim via HTTP");
-      res.status(response.status).json(response.data);
-    }
-
-    console.log(response);
+    console.log("Berhasil menyimpan data semua:", result);
+    res.status(200).json({ message: "Berhasil menyimpan data semua" });
   } catch (err) {
-    console.error("Gagal menyimpan data atau HTTP error:", err.message);
-    res
-      .status(500)
-      .json({ message: "Gagal menyimpan data atau terjadi kesalahan HTTP" });
+    console.log("Gagal menyimpan data semua:", err);
+    res.status(500).json({ message: "Gagal menyimpan data semua" });
   }
 });
 
-// Route untuk mendapatkan semua data dari database lokal
 router.get("/getDataAll", async (req, res) => {
   try {
     const data = await Data.find({}).sort({ createdAt: -1 });
