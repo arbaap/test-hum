@@ -7,6 +7,7 @@
 #include <TinyGsmClient.h>
 #include <HTTPClient.h>
 
+// Pin definitions
 #define SOIL_MOISTURE_PIN 33
 #define BME_SDA 18
 #define BME_SCL 19
@@ -22,9 +23,10 @@
 #define MODEM_RX 26
 #define MODEM_BAUD 115200
 
-const char apn[] = "internet";  
-const char user[] = "";         
-const char pass[] = "";         
+// GSM credentials and server info
+const char apn[] = "internet";  // APN for your SIM card
+const char user[] = "";            // Usually empty
+const char pass[] = "";            // Usually empty
 
 Adafruit_BME280 bme;
 LiquidCrystal_I2C lcd(0x27, 16, 2);
@@ -38,13 +40,16 @@ int lastSoilMoisture = -1;
 float lastReading = -1.0;
 
 void setup() {
+  // Initialize serial communication
   Serial.begin(115200);
   delay(10);
 
+  // Initialize LCD
   Wire.begin(BME_SDA, BME_SCL);
   lcd.init();
   lcd.backlight();
 
+  // Initialize BME280 sensor
   if (!bme.begin(0x76)) {
     Serial.println("Could not find BME280 sensor, check wiring!");
     lcd.clear();
@@ -55,9 +60,11 @@ void setup() {
     while (1);
   }
 
+  // Initialize GSM module
   Serial1.begin(MODEM_BAUD, SERIAL_8N1, MODEM_RX, MODEM_TX);
   delay(3000);
 
+  // Power on the modem
   pinMode(MODEM_PWRKEY, OUTPUT);
   pinMode(MODEM_POWER_ON, OUTPUT);
   digitalWrite(MODEM_PWRKEY, LOW);
@@ -65,6 +72,7 @@ void setup() {
   delay(1000);
   digitalWrite(MODEM_PWRKEY, HIGH);
 
+  // Reset modem
   pinMode(MODEM_RST, OUTPUT);
   digitalWrite(MODEM_RST, HIGH);
   delay(100);
@@ -73,12 +81,14 @@ void setup() {
   digitalWrite(MODEM_RST, HIGH);
   delay(10000);
 
+  // Initialize modem
   Serial.println("Initializing modem...");
   modem.restart();
   String modemInfo = modem.getModemInfo();
   Serial.print("Modem: ");
   Serial.println(modemInfo);
 
+  // Connect to GSM network
   Serial.print("Connecting to network...");
   if (!modem.waitForNetwork()) {
     Serial.println(" fail");
@@ -86,6 +96,7 @@ void setup() {
   }
   Serial.println(" success");
 
+  // Connect to GPRS
   Serial.print("Connecting to ");
   Serial.print(apn);
   if (!modem.gprsConnect(apn, user, pass)) {
@@ -94,6 +105,7 @@ void setup() {
   }
   Serial.println(" success");
 
+  // Check signal quality
   int signalQuality = modem.getSignalQuality();
   Serial.print("Signal quality: ");
   Serial.print(signalQuality);
@@ -129,6 +141,7 @@ void loop() {
       Serial.println(humidity);
       Serial.println("=================================");
 
+      // Display data on LCD
       lcd.clear();
       if (firstDisplay) {
         lcd.setCursor(0, 0);
@@ -154,6 +167,7 @@ void loop() {
 
       sendDataAll(String(soilMoisturePercentage), String(temperature), String(humidity), String(pH));
 
+      // Check signal quality periodically
       int signalQuality = modem.getSignalQuality();
       Serial.print("Signal quality: ");
       Serial.print(signalQuality);
@@ -163,25 +177,72 @@ void loop() {
 }
 
 void sendDataAll(String kelembapanTanah, String temperature, String humidity, String pHTanah) {
-  HTTPClient http;
+  String server = "test-hum.vercel.app";
+  String url = "/api/data/kirimData";
+  int port = 80;
   
-  http.begin("https://server-phtanah.vercel.app/api/data/kirimData");
-  http.addHeader("Content-Type", "application/json");
+  if (!client.connect(server.c_str(), port)) {
+    Serial.println("Connection to server failed!");
+    return;
+  }
 
   String payload = "{\"kelembapan_tanah\": \"" + kelembapanTanah + "\",\"temperature\": \"" + temperature + "\", \"humidity\": \"" + humidity + "\", \"pH_tanah\": \"" + pHTanah + "\"}";
 
-  http.followRedirects(true);
+  Serial.println("Sending data: ");
+  Serial.println(payload);
 
-  int httpResponseCode = http.POST(payload);
+  client.print(String("POST ") + url + " HTTP/1.1\r\n" +
+               "Host: " + server + "\r\n" +
+               "Content-Type: application/json\r\n" +
+               "Content-Length: " + payload.length() + "\r\n" +
+               "\r\n" +
+               payload);
 
-  if (httpResponseCode > 0) {
-    Serial.print("Data Terkirim ke Server! Kode respons: ");
-    Serial.println(httpResponseCode);
-  } else {
-    Serial.print("Gagal mengirim data. Kode respons: ");
-    Serial.println(httpResponseCode);
+  unsigned long timeout = millis();
+  while (client.available() == 0) {
+    if (millis() - timeout > 5000) {
+      Serial.println(">>> Client Timeout !");
+      client.stop();
+      return;
+    }
   }
 
-  // Menutup koneksi HTTP
-  http.end();
+  bool redirected = false; 
+  while (client.available()) {
+    String line = client.readStringUntil('\r');
+    Serial.print(line);
+    if (line.startsWith("HTTP/1.1 308") || line.startsWith("HTTP/1.0 308")) {
+      redirected = true;
+      client.stop(); 
+      String newUrl = "";
+      if (line.indexOf("Location: ") != -1) {
+        newUrl = line.substring(line.indexOf("Location: ") + 10);
+        newUrl.trim();
+        Serial.print("Redirecting to: ");
+        Serial.println(newUrl);
+        if (!client.connect(newUrl.c_str(), port)) {
+          Serial.println("Connection to new URL failed!");
+          return;
+        }
+        client.print(String("POST ") + url + " HTTP/1.1\r\n" +
+                     "Host: " + server + "\r\n" +
+                     "Content-Type: application/json\r\n" +
+                     "Content-Length: " + payload.length() + "\r\n" +
+                     "\r\n" +
+                     payload);
+        timeout = millis(); 
+      }
+    }
+  }
+
+  if (!redirected) {
+    while (client.available()) {
+      String line = client.readStringUntil('\r');
+      Serial.print(line);
+    }
+  }
+
+  client.stop();
 }
+
+
