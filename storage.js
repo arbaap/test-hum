@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-
+const morgan = require("morgan");
 const dbConfig = require("./mongoDB");
 
 const encryptedRoute = require("./routes/encryptedRoute");
@@ -12,16 +12,20 @@ app.use(cors());
 
 app.use(express.json());
 
+app.use(morgan("combined"));
+
 app.use((req, res, next) => {
-  const statusCode = 308;
-  if (res.statusCode === statusCode) {
-    const newLocation = "https://test-hum.vercel.app/api/data/kirimData";
-    res.setHeader("Location", newLocation);
-    return res
-      .status(statusCode)
-      .send(`Permanently redirected to ${newLocation}`);
+  if (
+    req.header("x-forwarded-proto") !== "https" &&
+    process.env.NODE_ENV === "production"
+  ) {
+    console.log(
+      `Redirecting to HTTPS: https://${req.header("host")}${req.url}`
+    );
+    res.redirect(`https://${req.header("host")}${req.url}`);
+  } else {
+    next();
   }
-  next();
 });
 
 app.get("/", async (req, res, next) => {

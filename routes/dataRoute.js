@@ -17,17 +17,10 @@ router.post("/kirimData", async (req, res) => {
   try {
     const result = await newData.save();
     console.log("Berhasil menyimpan data semua:", result);
-
-    const newLocation = "https://test-hum.vercel.app/api/data/kirimData";
-    res
-      .status(308)
-      .set("Location", newLocation)
-      .json({ message: "Data berhasil disimpan", newLocation: newLocation });
+    res.status(200).json({ message: "Berhasil menyimpan data semua" });
   } catch (err) {
     console.log("Gagal menyimpan data semua:", err);
-    res
-      .status(500)
-      .json({ message: "Gagal menyimpan data semua", error: err.message });
+    res.status(500).json({ message: "Gagal menyimpan data semua" });
   }
 });
 
