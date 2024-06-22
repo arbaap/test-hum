@@ -38,6 +38,13 @@ app.get("/", async (req, res, next) => {
 app.use("/api/encrypted", encryptedRoute);
 app.use("/api/data", dataRoute);
 
-const port = process.env.PORT || 5000;
+// const port = process.env.PORT || 5000;
 
-app.listen(port, () => console.log("Server Sensor is running on port", port));
+// app.listen(port, () => console.log("Server Sensor is running on port", port));
+
+const port = process.env.PORT || 5000;
+const host = "0.0.0.0";
+
+app.listen(port, host, () => {
+  console.log(`Server Sensor is running on http://${host}:${port}`);
+});

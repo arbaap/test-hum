@@ -220,6 +220,7 @@ void sendDataAll(String kelembapanTanah, String temperature, String humidity, St
         newUrl.trim();
         Serial.print("Redirecting to: ");
         Serial.println(newUrl);
+        client.stop();
         if (!client.connect(newUrl.c_str(), port)) {
           Serial.println("Connection to new URL failed!");
           return;
@@ -244,5 +245,6 @@ void sendDataAll(String kelembapanTanah, String temperature, String humidity, St
 
   client.stop();
 }
+
 
 
