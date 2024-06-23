@@ -35,6 +35,13 @@ app.get("/", async (req, res, next) => {
   });
 });
 
+app.get("/home", async (req, res, next) => {
+  return res.status(200).json({
+    title: "Home",
+    message: "Server siap digunakan!",
+  });
+});
+
 app.use("/api/encrypted", encryptedRoute);
 app.use("/api/data", dataRoute);
 
